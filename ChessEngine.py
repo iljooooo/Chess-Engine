@@ -12,13 +12,6 @@ class Move():
     FILES_TO_COLS: Dict[str, int] = {'abcdefgh'[i]: i for i in range(8)}
     COLS_TO_FILES: Dict[int, str] = {v: k for k,v in FILES_TO_COLS.items()}
 
-    SPECIAL_MOVES: Dict[str, str] = {
-        'long_castle': 'OOO', 
-        'short_castle': 'OO',
-        'en_passant': 'ep',
-        'pawn_promotion': ''
-    }
-
     def __init__(self, start_square: Tuple[int, int], end_square: Tuple[int, int], game, en_passant: Optional[bool] = False, short_castle: Optional[bool] = False, long_castle: Optional[bool] = False, pawn_promotion: Tuple[bool, Literal['--', 'wQ', 'wR', 'wN', 'wB', 'bQ', 'bR', 'bN', 'bB']] = (False, '--'), which_promotion: str = '') -> None:
         self.start_row = start_square[0]
         self.start_col = start_square[1]
