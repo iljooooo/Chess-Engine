@@ -1,7 +1,6 @@
 '''Here we store info and manage the status of game, determine valid mover, etc. This is basically the backend'''
 import numpy as np
-from typing import Union, Tuple, Dict, List, Callable, Optional, Any
-
+from typing import Union, Tuple, Dict, List, Callable, Optional, Any, Literal
 
 
 
@@ -20,7 +19,7 @@ class Move():
         'pawn_promotion': ''
     }
 
-    def __init__(self, start_square: Tuple[int, int], end_square: Tuple[int, int], game, en_passant: Optional[bool] = False, short_castle: Optional[bool] = False, long_castle: Optional[bool] = False, pawn_promotion: Optional[bool] = False) -> None:
+    def __init__(self, start_square: Tuple[int, int], end_square: Tuple[int, int], game, en_passant: Optional[bool] = False, short_castle: Optional[bool] = False, long_castle: Optional[bool] = False, pawn_promotion: Tuple[bool, Literal['--', 'wQ', 'wR', 'wN', 'wB', 'bQ', 'bR', 'bN', 'bB']] = (False, '--'), which_promotion: str = '') -> None:
         self.start_row = start_square[0]
         self.start_col = start_square[1]
         self.end_row = end_square[0]
@@ -33,6 +32,7 @@ class Move():
         self.short_castle = short_castle
         self.long_castle = long_castle
         self.pawn_promotion = pawn_promotion
+        self.which_promotion = which_promotion
     ##
 
     def __repr__(self) -> str:
@@ -109,12 +109,12 @@ class GameState():
 
         self.board = np.array([
             np.array(["bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"], dtype=str),
-            np.array(8*['bP'], dtype=str),
-            np.array(8*['--'], dtype=str),
-            np.array(8*['--'], dtype=str),
-            np.array(8*['--'], dtype=str),
-            np.array(8*['--'], dtype=str),
-            np.array(8*['wP'], dtype=str),
+            np.array(['bP', 'bP', 'bP', 'bP', 'bP', 'bP', 'bP', 'bP'], dtype=str),
+            np.array(['--', '--', '--', '--', '--', '--', '--', '--'], dtype=str),
+            np.array(['--', '--', '--', '--', '--', '--', '--', '--'], dtype=str),
+            np.array(['--', '--', '--', '--', '--', '--', '--', '--'], dtype=str),
+            np.array(['--', '--', '--', '--', '--', '--', '--', '--'], dtype=str),
+            np.array(['wP', 'wP', 'wP', 'wP', 'wP', 'wP', 'wP', 'wP'], dtype=str),
             np.array(['wR', 'wN', 'wB', 'wQ', 'wK', 'wB', 'wN', 'wR'], dtype=str)
         ])
 
@@ -205,6 +205,10 @@ class GameState():
             #full_col = 'white' if self.white_to_move else 'black'
             #self.__setattr__(f'{full_col}_long_castle', self.__getattribute__(f'{full_col}_short_castle')+1)
 
+        ## PROMOTION LOGIC ##
+        if move.pawn_promotion[0]:
+            self.board[move.end_row, move.end_col] = move.pawn_promotion[1]
+
         #last operation to do is to pass the turn to the other player
         self.white_to_move = not self.white_to_move 
     ##
@@ -270,35 +274,6 @@ class GameState():
 
     '''LIST OF MOVE FILTERING METHODS. THESE ENABLE CONTROL OVER THE BOARD, LOOK FOR CHECKS, STALEMATE, CASTLING, ETC...
     THEY ARE ALL ICLUDED IN THIS CHUNK TO LET THE CODE ORDERED'''
-
-    '''Determine whether CURRENT player is in check. It is important to consider which player is moving during the development of any kind of alogirthm'''
-    '''def in_check(self) -> bool:
-        if self.white_to_move:
-            return self.square_under_attack(self.white_king_pos[0], self.white_king_pos[1])
-        else:
-            return self.square_under_attack(self.black_king_pos[0], self.black_king_pos[1])'''
-
-    '''Determine whether opponent can attack square (r,c)'''
-    '''def square_under_attack(self, r:int, c:int) -> bool:
-        self.white_to_move = not self.white_to_move #we change perspective
-        opp_moves: List[Move] = self.get_all_possible_moves() #and calc every possible move
-        self.white_to_move = not self.white_to_move #switch turn back, since we already calculated our moves
-
-        for move in opp_moves:
-            if (move.end_row == r) and (move.end_col == c):
-                return True
-        
-        return False'''
-    
-
-    '''Helper method that looks for checks and pins. It is needed in self.get_valid_moves() to filter moves more easily. Please observe how this method has not the property to change internal status of anything, it just looks at current game status and returns something that might be needed. 
-    
-        Storing the pin is rather easy: we record both the position of the piece that is pinned, and the direction with respect to the king that the piece is pinned. This is done because pinned piece could be allowed to move, they are only forced to move along the same direction to which they are pinned. So our `pins` variable contains element of the kind (row, col, dir_row, dir_col). If the pins are stored at a global level, then they are handled by a decorator function that filters out possible moves based on constraints given by global pin conditions.
-
-        Storing the checks requires a little bit of a trick. Rather than just storing only the information about the piece that is indeed causing the check, we decide to store the whole row . This is done in order to keep track of all of the cells in which we are allowed to move our piece in order to block the check, without having to recalc those afterwards. In this case, we are only in the position since in order to block the check we just need to move in one of the cell stored as a direction, maybe even the last one (which would mean capturing the piece which is giving the check). This means that any element of the check list is something of the form:
-                - [[i1,j1], [i2,j2], ..., [in, jn]] -> observe how this is a list
-            Moreover, we can just access the position of the piece we are interested
-    '''
 
     def check_for_pins_and_checks(self) -> Tuple[bool, List[Tuple[int, int, int, int]], List[List[Tuple[int,int]]]]: 
         in_check = False; pins = []; checks = []
@@ -393,6 +368,8 @@ class GameState():
         self.in_check, self.pins, self.checks = self.check_for_pins_and_checks()
         moves: List[Move] = self.get_all_possible_moves()
 
+        #TODO: Update Kings moves calculation when in check. Very rusty at the moment.
+
         if self.in_check: #we need to operate some filtering
             if len(self.checks) == 1:
                 all_cells_check_direction: List[Tuple[int, int]] = self.checks[0]
@@ -465,19 +442,21 @@ class GameState():
         opp_color: str = 'b' if self.white_to_move else 'w'
 
         if self.board[r+i,c] == '--':
-            moves.append((Move((r,c), (r+i,c), self), dir))
+            promotion = (True, '--') if r+i in [0,7] else (False, '--')
+            moves.append((Move((r,c), (r+i,c), self, pawn_promotion=promotion), dir))
 
             if (r == pawns_starting_row) and (self.board[r+(2*i), c] == '--'):
-                moves.append((Move((r,c), (r+(2*i), c), self), dir))
+                moves.append((Move((r,c), (r+(2*i), c), self), dir)) #double pushes can never result in promotion
             
         diags = [(i,1), (i,-1)]
         for diag_i, diag_j in diags:
             if all([0<=r+diag_i<=7, 0<=c+diag_j<=7]):
+                promotion = (True, '--') if r+diag_i in [0,7] else (False, '--')
                 if (self.board[r+diag_i, c+diag_j][0] == opp_color): 
-                    moves.append((Move((r,c), (r+diag_i, c+diag_j), self), (diag_i, diag_j)))
+                    moves.append((Move((r,c), (r+diag_i, c+diag_j), self, pawn_promotion=promotion), (diag_i, diag_j)))
 
                 if [(r,c), (diag_i, diag_j)] in self.en_passant: #if en-passant is allowed, we add
-                    moves.append((Move((r,c), (r+diag_i, c+diag_j), self, en_passant=True), (diag_i, diag_j)))
+                    moves.append((Move((r,c), (r+diag_i, c+diag_j), self, en_passant=True), (diag_i, diag_j))) #en passant can never result in a promotion
                     pass
 
         #TODO: add en-passant and pawn promotion (probably pawn promotion needs to be added in the move module, at the end of the turn?)

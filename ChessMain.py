@@ -2,7 +2,15 @@
 
 import pygame as p
 import ChessEngine
-from typing import Tuple, Optional, Union, List
+from typing import Tuple, Optional, Union, List, Callable, Literal
+
+import sys
+sys.path.append('/Users/simone/Library/Python/3.13/lib/python/site-packages')
+
+import pygamepopup # pyright: ignore[reportMissingImports]
+from pygamepopup.menu_manager import MenuManager  # pyright: ignore[reportMissingImports]
+from pygamepopup.components import Button, InfoBox # pyright: ignore[reportMissingImports]
+
 
 #fixing pixels related parameters
 p.init() #just to be sure it gets initialized, probably redundant
@@ -24,13 +32,15 @@ def load_images():
 
 def main():
     p.init()
+    pygamepopup.init()
     screen = p.display.set_mode((WIDTH, HEIGHT))
     clock = p.time.Clock()
     screen.fill(p.Color("white"))
+    pawn_promotion_scene = None
 
     game = ChessEngine.GameState() #we initialize game as our primary object
     valid_moves: List[ChessEngine.Move] = game.get_valid_moves() #these are moves possible at the very beginning
-    move_made: bool = False #This little flag logic is used to avoid generating moves after every loop, saving time
+    move_made: bool = False #This little exit_flag logic is used to avoid generating moves after every loop, saving time
     #print(game.board)
 
     load_images() #actually load the images 
@@ -47,9 +57,12 @@ def main():
                 running = False
 
             ## MOUSE HANDLER
+            if pawn_promotion_scene:
+                pass
+
             elif e.type == p.MOUSEBUTTONDOWN:
-                location = p.mouse.get_pos() #this returns (x,y) location of the mouse as a Tuple(int,int)
-                col, row = location[0]//SQ_SIZE, location[1]//SQ_SIZE #and this translates it in row/col notation for the engine
+                location = p.mouse.get_pos() 
+                col, row = location[0]//SQ_SIZE, location[1]//SQ_SIZE 
                 
                 if sq_selected == (row,col):
                     sq_selected = () #we deselect if the same click is given as an input twice
@@ -70,11 +83,15 @@ def main():
                     
                     for engine_move in valid_moves:
                         if move == engine_move:
+                            if engine_move.pawn_promotion[0]:
+                                engine_move.pawn_promotion = (True, handle_pawn_promotion(screen, game, engine_move)) # we first want to handle pawn promotion separately in order to interact correctly with the game
+
                             game.make_move(engine_move)
                             print(engine_move)
                             move_made = True
                             sq_selected = ()
                             player_clicks = []
+
                             break
 
                     else:
@@ -164,6 +181,107 @@ def draw_pieces(screen: p.Surface, gs: ChessEngine.GameState) -> None:
             if piece != '--': #if the cell is not empty
                 screen.blit(IMAGES[piece], p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
     pass
+##
+
+
+def promotion(func: Callable):
+    def wrapper() -> Optional[Callable]:
+        pass
+    return wrapper
+##
+
+
+'''Method that is needeed to print to screen the choices in order to let the player decide what to promote the pawn to'''
+class PawnPromotionScreen():
+
+    def __init__(self, screen: p.Surface, gs: ChessEngine.GameState, move: ChessEngine.Move) -> None:
+        self.screen = screen
+        self.menu_manager = MenuManager(screen)
+        self.exit_request = False
+
+        self.create_main_menu_interface()
+    ##
+
+    def create_main_menu_interface(self):
+        main_menu = InfoBox(
+            "Test Menu", 
+            [
+                [Button(title="Q",callback=lambda: self.promote_to_queen())],
+                [Button(title="N", callback=lambda: self.promote_to_rook())],
+                [Button(title='B', callback= lambda: self.promote_to_bishop())],
+                [Button(title='R')]
+            ],
+
+            has_close_button=False,
+        )
+        self.menu_manager.open_menu(main_menu)
+    ##
+
+    def promote_to_queen(self):
+        pass
+    ##
+
+    def promote_to_rook(self):
+        pass
+    ##
+
+    def promote_to_bishop(self):
+        pass
+    ##
+
+    def display(self) -> None:
+        self.menu_manager.display()
+        p.display.update()
+    ##
+
+    def click(self, button: int, position: p.Vector2) -> bool:
+        self.menu_manager.click(button, position)
+        return self.exit_request
+##
+
+PAWN_PROMOTION_HEIGHT = HEIGHT // 8
+PAWN_PROMOTION_WIDTH = PAWN_PROMOTION_HEIGHT * 4
+BOX_HEIGHT = 3*PAWN_PROMOTION_HEIGHT
+BOX_WIDTH =  PAWN_PROMOTION_WIDTH + 2*PAWN_PROMOTION_HEIGHT
+
+BOX_INIT_X =  (WIDTH - BOX_WIDTH) // 2
+BOX_INIT_Y = ((WIDTH - BOX_HEIGHT - PAWN_PROMOTION_HEIGHT) // 2)
+PAWN_PROMOTION_INIT_X = (WIDTH - PAWN_PROMOTION_WIDTH) // 2
+PAWN_PROMOTION_INIT_Y = (HEIGHT - PAWN_PROMOTION_HEIGHT) // 2
+
+
+def handle_pawn_promotion(screen: p.Surface, game: ChessEngine.GameState, move: ChessEngine.Move) -> Literal['--', 'wQ', 'wR', 'wN', 'wB', 'bQ', 'bR', 'bN', 'bB']:
+    
+    pieces = ['Q', 'R', 'B', 'N']
+    col: Literal['w', 'b'] = move.piece_moved[0]
+    promotion_figures: List[Literal['--', 'wQ', 'wR', 'wN', 'wB', 'bQ', 'bR', 'bN', 'bB']] = [col + i for i in pieces]  # pyright: ignore[reportAssignmentType]
+
+    # drawing the panel
+    #screen.fill('white')
+    p.draw.rect(screen, 'black', p.Rect(BOX_INIT_X, BOX_INIT_Y, BOX_WIDTH, BOX_HEIGHT))
+
+    for i, piece in enumerate(promotion_figures):
+         p.draw.rect(screen, GRAPHICS_PALETTE[i%2], p.Rect(PAWN_PROMOTION_INIT_X + i*PAWN_PROMOTION_HEIGHT, PAWN_PROMOTION_INIT_Y, PAWN_PROMOTION_HEIGHT, PAWN_PROMOTION_HEIGHT))
+
+         screen.blit(IMAGES[piece], p.Rect(PAWN_PROMOTION_INIT_X + i*PAWN_PROMOTION_HEIGHT, PAWN_PROMOTION_INIT_Y, PAWN_PROMOTION_HEIGHT, PAWN_PROMOTION_HEIGHT))
+
+    p.display.update()
+
+    # handling the exit event
+    exit_request: bool = False
+    while not exit_request:
+        for e in p.event.get():
+            if e.type == p.MOUSEBUTTONDOWN:
+                loc = p.mouse.get_pos()
+                x, y = loc[0], loc[1]
+
+                x = loc[0] - PAWN_PROMOTION_INIT_X
+                y = loc[1] - PAWN_PROMOTION_INIT_Y
+
+                if(all([0<=x<=PAWN_PROMOTION_WIDTH, 0<=y<=PAWN_PROMOTION_HEIGHT])):
+                    x:int = x//PAWN_PROMOTION_HEIGHT
+                    return promotion_figures[x]
+                    exit_request = not exit_request
 ##
 
 
