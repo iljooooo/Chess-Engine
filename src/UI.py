@@ -1,6 +1,8 @@
 import pygame as p
-from typing import Tuple, Optional, Union, List, Callable, Literal, Dict
+from typing import Iterable, Tuple, Optional, Union, List, Any, Callable, Literal, Dict
 import copy
+
+from pygame.sprite import AbstractGroup
 p.init()
 
 
@@ -74,7 +76,7 @@ class _KwargMixin(object):
 class Button(p.sprite.Sprite, _KwargMixin):
     
     """
-    INSTANTIATE A BUTTON OBJECT.
+    INSTANTIATE A BUTTON OBJECT. We basically overwrite the p.Sprite object in order to have a better comprehension of what is happening
     """
     #_invisible = p.Surface.convert_alpha(surface=_invisible)
     #_invisible.fill((0,0,0,0))
@@ -165,7 +167,7 @@ class Button(p.sprite.Sprite, _KwargMixin):
     def on_up_event(self, event, onkey=False):
         if self.clicked and self.call_on_up:
             self.click_sound and self.click_sound.play()
-            self.call and self.call(self.args or self.text)
+            self.call and self.call()
         self.clicked = False
     ##
 
@@ -174,9 +176,10 @@ class Button(p.sprite.Sprite, _KwargMixin):
             self.clicked = True
             if not self.call_on_up:
                 self.click_sound and self.click_sound.play()
-                self.call and self.call(self.args or self.text)
+                self.call and self.call()
     ##
 
+    '''Handles hovering'''
     def update(self, prescaled_mouse_pos):
         hover = self.rect.collidepoint(prescaled_mouse_pos)
         pressed = p.key.get_pressed()
@@ -199,42 +202,107 @@ class Button(p.sprite.Sprite, _KwargMixin):
     ##
 ##
 
+class ButtonGroup(p.sprite.Group):
+    '''Same as Button, here we overwrite sprite.Group calls for the specifics we need'''
+
+    def __init__(self, *sprites: Iterable[Button]) -> None:
+        super().__init__(*sprites)
+
+    def get_event(self, e: p.event.Event):
+        for button in self.sprites():
+            button.get_event(e)
+    ##
+
+    def draw(self, screen: p.Surface , mouse_pos: Tuple[int, int]):
+        for button in self.sprites():
+            button.update(mouse_pos)
+            button.draw(screen)
+    ##
+
+
+##
 
 #TODO: add an auto display function that handles the graphics in automatic without having to format every single detail in the button declarations (when initializing the GeneralMenu type - objects)
 
+class Menu(p.sprite.Group):
+    """
+    Instntiate a Menu as a list of Buttons. The idea is to pass buttons as arguments, then we simply display every object in the current screen. auto_display() is a method that overwrites positional arguments of singular buttons in order to automatically display the buttons in the screen center
+    """
+    def __init__(self, buttons: List[Button], auto_display: bool = False):
+        pass
+    ##
 
+    def _auto_display(self):
+        pass
+    ##
+
+    def draw(self, screen):
+        pass
+    ##
+##
+
+
+
+#############
+## TESTING ##
+#############
 if __name__ == "__main__":
     p.init()
 
     WIDTH = HEIGHT = 512
+    BUTTONS_Y_SPACING = 100
+
+
     screen = p.display.set_mode((WIDTH, HEIGHT))
     clock = p.time.Clock()
     screen.fill("white")
 
-    #buttons = p.sprite.Group()
+    COMMON_ATTRIBUTES = {
+        "button_size": (100,20),
+        "fill_color": p.Color("white"),
+        "hover_fill_color": p.Color("black"),
+        "font": p.font.match_font('arial', bold=True),
+        "font_size": 13,
+        "text_color": 'black',
+        "hover_text_color": 'white',
+        "call": lambda:print(0)
+    }
 
-    btn = Button(
-        rect_attr={"center": (200, 150)},
-        button_size=(100,20),
-        fill_color=p.Color("orange"),
-        hover_fill_color=p.Color("yellow"),
-        text=None,
-        hover_text=None,
-        call = lambda:print(0)
+    play_btn = Button(
+        rect_attr = {"center": (WIDTH//2, HEIGHT//2 - BUTTONS_Y_SPACING)},
+        text= 'PLAY',
+        hover_text = "PLAY",
+        **COMMON_ATTRIBUTES
     )
 
-    #buttons.add(btn)
-    #buttons.draw(screen)
+    settings_btn = Button(
+        rect_attr={"center": (WIDTH//2, HEIGHT//2)},
+        text = "SETTINGS",
+        hover_text = "SETTINGS",
+        **COMMON_ATTRIBUTES
+    )
+
+    credits_btn = Button(
+        rect_attr={"center": (WIDTH//2, HEIGHT//2 + BUTTONS_Y_SPACING)},
+        text= "CREDITS",
+        hover_text= "CREDITS",
+        **COMMON_ATTRIBUTES
+    )
+
+    buttons = ButtonGroup((
+        play_btn,
+        settings_btn,
+        credits_btn
+    )) 
     
     running = True
     while running:
         for e in p.event.get():
 
-            btn.get_event(e)
-            if e.type == p.MOUSEBUTTONDOWN or e.type == p.QUIT:
+            buttons.get_event(e)
+            if e.type == p.QUIT:
                 running = False
         
         mouse_pos = p.mouse.get_pos()
-        btn.update(mouse_pos)
-        btn.draw(screen)
+        buttons.draw(screen, mouse_pos)
         p.display.flip()
