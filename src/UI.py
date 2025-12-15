@@ -1,6 +1,7 @@
 import pygame as p
 from typing import Tuple, Optional, Union, List, Callable, Literal, Dict
 import copy
+p.init()
 
 
 LOADED_FONTS = {}
@@ -75,6 +76,8 @@ class Button(p.sprite.Sprite, _KwargMixin):
     """
     INSTANTIATE A BUTTON OBJECT.
     """
+    #_invisible = p.Surface.convert_alpha(surface=_invisible)
+    #_invisible.fill((0,0,0,0))
 
     def __init__(self, rect_attr, *groups, **kwargs):
         super(Button, self).__init__(*groups)
@@ -146,6 +149,54 @@ class Button(p.sprite.Sprite, _KwargMixin):
 
         return final_image
     ##
+
+    def get_event(self, event: p.event.Event):
+        if self.active and self.visible:
+            if event.type == p.MOUSEBUTTONUP and event.button == 1:
+                self.on_up_event(event)
+            elif event.type == p.MOUSEBUTTONDOWN and event.button == 1:
+                self.on_down_event(event)
+            elif event.type == p.KEYDOWN and event.key in self.bindings:
+                self.on_down_event(event, True)
+            elif event.type == p.KEYUP and event.key in self.bindings:
+                self.on_up_event(event, True)
+    ##
+
+    def on_up_event(self, event, onkey=False):
+        if self.clicked and self.call_on_up:
+            self.click_sound and self.click_sound.play()
+            self.call and self.call(self.args or self.text)
+        self.clicked = False
+    ##
+
+    def on_down_event(self, event, onkey=False):
+        if self.hover or onkey:
+            self.clicked = True
+            if not self.call_on_up:
+                self.click_sound and self.click_sound.play()
+                self.call and self.call(self.args or self.text)
+    ##
+
+    def update(self, prescaled_mouse_pos):
+        hover = self.rect.collidepoint(prescaled_mouse_pos)
+        pressed = p.key.get_pressed()
+        if any(pressed[key] for key in self.bindings):
+            hover = True
+        if not self.visible:
+            pass
+            #self.image = Button._invisible
+        elif self.active:
+            self.image = (hover and self.hover_image) or self.idle_image
+            if not self.hover and hover:
+                self.hover_sound and self.hover_sound.play()
+            self.hover = hover
+        else:
+            self.image = self.disable_image or self.idle_image
+    ##
+
+    def draw(self, surface):
+        surface.blit(self.image, self.rect)
+    ##
 ##
 
 
@@ -160,7 +211,7 @@ if __name__ == "__main__":
     clock = p.time.Clock()
     screen.fill("white")
 
-    buttons = p.sprite.Group()
+    #buttons = p.sprite.Group()
 
     btn = Button(
         rect_attr={"center": (200, 150)},
@@ -169,15 +220,21 @@ if __name__ == "__main__":
         hover_fill_color=p.Color("yellow"),
         text=None,
         hover_text=None,
-        call = lambda:0
+        call = lambda:print(0)
     )
 
-    buttons.add(btn)
-    buttons.draw(screen)
+    #buttons.add(btn)
+    #buttons.draw(screen)
     
     running = True
     while running:
         for e in p.event.get():
-            if e.type == p.MOUSEBUTTONDOWN:
+
+            btn.get_event(e)
+            if e.type == p.MOUSEBUTTONDOWN or e.type == p.QUIT:
                 running = False
+        
+        mouse_pos = p.mouse.get_pos()
+        btn.update(mouse_pos)
+        btn.draw(screen)
         p.display.flip()
