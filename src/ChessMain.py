@@ -1,7 +1,7 @@
 '''This is gonna be the driver file, displying GameState, receiving user inputs, ...'''
 
 import pygame as p
-import ChessEngine
+import src.ChessEngine as ChessEngine
 from typing import Tuple, Optional, Union, List, Callable, Literal
 
 import sys
