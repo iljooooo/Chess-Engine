@@ -1,8 +1,7 @@
 import pygame as p
-from typing import Iterable, Tuple, Optional, Union, List, Any, Callable, Literal, Dict
+from typing import Iterable, Tuple, List, Any, Callable, Literal, Dict
 import copy
 
-from pygame.sprite import AbstractGroup
 p.init()
 
 
@@ -72,6 +71,8 @@ class _KwargMixin(object):
 ##
 
 #TODO: add some options to handle more complex graphical features: dropdown buttons menu, ecc...
+
+#TODO: adding hovering animations effect
 
 class Button(p.sprite.Sprite, _KwargMixin):
     
@@ -200,6 +201,10 @@ class Button(p.sprite.Sprite, _KwargMixin):
     def draw(self, surface):
         surface.blit(self.image, self.rect)
     ##
+
+    def get_size(self) -> Tuple[int, int]:
+        return self.button_size
+    ##
 ##
 
 class ButtonGroup(p.sprite.Group):
@@ -265,7 +270,6 @@ if __name__ == "__main__":
         "font_size": 13,
         "text_color": 'black',
         "hover_text_color": 'white',
-        "call": lambda:print(0)
     }
 
     play_btn = Button(
@@ -274,11 +278,13 @@ if __name__ == "__main__":
         hover_text = "PLAY",
         **COMMON_ATTRIBUTES
     )
+    play_btn.call = lambda: print(play_btn.get_size()) # bound method
 
     settings_btn = Button(
         rect_attr={"center": (WIDTH//2, HEIGHT//2)},
         text = "SETTINGS",
         hover_text = "SETTINGS",
+        call = lambda: 0,
         **COMMON_ATTRIBUTES
     )
 
@@ -286,6 +292,7 @@ if __name__ == "__main__":
         rect_attr={"center": (WIDTH//2, HEIGHT//2 + BUTTONS_Y_SPACING)},
         text= "CREDITS",
         hover_text= "CREDITS",
+        call = lambda: 0,
         **COMMON_ATTRIBUTES
     )
 

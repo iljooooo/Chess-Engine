@@ -1,4 +1,4 @@
-from utils_interfaces.UI import Button
+from src.utils_interfaces.buttons import Button
 
 class OpenMenu():
     pass
