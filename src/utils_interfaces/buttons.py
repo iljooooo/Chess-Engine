@@ -1,9 +1,7 @@
 import pygame as p
-from typing import Iterable, Tuple, List, Any, Callable, Literal, Dict
+from typing import Iterable, Tuple, Dict
 import copy
-
 p.init()
-
 
 LOADED_FONTS = {}
 
@@ -36,7 +34,7 @@ BUTTON_DEFAULTS = {
 }
 
 '''Helper function: accepts as input different ways of color formatting and always returns a pygame.Color object'''
-def _parse_color(col: p.Color | Tuple[int, int, int]) -> p.Color:
+def _parse_color(col: str | p.Color | Tuple[int, int, int]) -> p.Color:
     if col is not None:
         try:
             return p.Color(str(col))
@@ -142,7 +140,8 @@ class Button(p.sprite.Sprite, _KwargMixin):
         if not any((fill, image, text)):
             return None
         
-        final_image = p.Surface(self.rect.size).convert_alpha()
+        final_image = p.Surface(self.rect.size)
+        #final_image = final_image.convert_alpha()
         final_image.fill((0,0,0,0))
 
         rect = final_image.get_rect()
@@ -223,93 +222,3 @@ class ButtonGroup(p.sprite.Group):
             button.update(mouse_pos)
             button.draw(screen)
     ##
-
-
-##
-
-#TODO: add an auto display function that handles the graphics in automatic without having to format every single detail in the button declarations (when initializing the GeneralMenu type - objects)
-
-class Menu(p.sprite.Group):
-    """
-    Instntiate a Menu as a list of Buttons. The idea is to pass buttons as arguments, then we simply display every object in the current screen. auto_display() is a method that overwrites positional arguments of singular buttons in order to automatically display the buttons in the screen center
-    """
-    def __init__(self, buttons: List[Button], auto_display: bool = False):
-        pass
-    ##
-
-    def _auto_display(self):
-        pass
-    ##
-
-    def draw(self, screen):
-        pass
-    ##
-##
-
-
-
-#############
-## TESTING ##
-#############
-if __name__ == "__main__":
-    p.init()
-
-    WIDTH = HEIGHT = 512
-    BUTTONS_Y_SPACING = 100
-
-
-    screen = p.display.set_mode((WIDTH, HEIGHT))
-    clock = p.time.Clock()
-    screen.fill("white")
-
-    COMMON_ATTRIBUTES = {
-        "button_size": (100,20),
-        "fill_color": p.Color("white"),
-        "hover_fill_color": p.Color("black"),
-        "font": p.font.match_font('arial', bold=True),
-        "font_size": 13,
-        "text_color": 'black',
-        "hover_text_color": 'white',
-    }
-
-    play_btn = Button(
-        rect_attr = {"center": (WIDTH//2, HEIGHT//2 - BUTTONS_Y_SPACING)},
-        text= 'PLAY',
-        hover_text = "PLAY",
-        **COMMON_ATTRIBUTES
-    )
-    play_btn.call = lambda: print(play_btn.get_size()) # bound method
-
-    settings_btn = Button(
-        rect_attr={"center": (WIDTH//2, HEIGHT//2)},
-        text = "SETTINGS",
-        hover_text = "SETTINGS",
-        call = lambda: 0,
-        **COMMON_ATTRIBUTES
-    )
-
-    credits_btn = Button(
-        rect_attr={"center": (WIDTH//2, HEIGHT//2 + BUTTONS_Y_SPACING)},
-        text= "CREDITS",
-        hover_text= "CREDITS",
-        call = lambda: 0,
-        **COMMON_ATTRIBUTES
-    )
-
-    buttons = ButtonGroup((
-        play_btn,
-        settings_btn,
-        credits_btn
-    )) 
-    
-    running = True
-    while running:
-        for e in p.event.get():
-
-            buttons.get_event(e)
-            if e.type == p.QUIT:
-                running = False
-        
-        mouse_pos = p.mouse.get_pos()
-        buttons.draw(screen, mouse_pos)
-        p.display.flip()

@@ -1,120 +1,74 @@
-import pygame as p
-import buttons
-
+import sys
 from typing import List, Tuple, Iterable, Callable
+import pygame as p
+from utils_interfaces.buttons import Button, ButtonGroup, _parse_color
+p.init()
+
 
 class Menu(p.sprite.Group):
 
-    def __init__(self, *bts: Iterable[buttons.Button]) -> None:
+    def __init__(
+            self, 
+            *bts: Iterable[Button], 
+            background_color: p.Color|str|Tuple[int, int, int] = p.Color('white'),
+    ) -> None:
         super().__init__(*bts)
-    ##
+        self.background_color = _parse_color(background_color)
 
-    '''def add(self, *widgets: List[buttons.Button] | Tuple[buttons.ButtonGroup]) -> None:
-        self.add(*widgets)
-    ##'''
+        '''if self.background_image:
+            if isinstance(self.background_image, str):
+                self.background_image = p.transform.scale(p.image.load(self.background_image), self.screen.get_size()).convert_alpha(self.screen)
+            elif isinstance(self.background_image, p.Surface):
+                self.background_image.convert_alpha(self.screen)'''
+    ##
+        
 
     def update(self, mouse_pos: Tuple[int, int]) -> None:
         for w in self.sprites():
             w.update(mouse_pos)
     ##
 
-    def handle_event(self, e: p.event.Event) -> None:
+    def get_event(self, e: p.event.Event) -> None:
         for w in self.sprites():
             w.get_event(e)
     ##
 
-    def draw(self, surface: p.Surface, mouse_pos: Tuple[int, int], auto_display = True) -> None:
+    def draw(self, surface: p.Surface, auto_display = True) -> None:
+
+        surface.fill(self.background_color)
 
         if not auto_display:
-            for w in self.widgets:
+            for w in self.sprites():
                 w.draw(surface)
 
         else:
-            surface_width, surface_height = surface.get_size()
-            
-
-
+            pass
+            #TODO: COMPLETE HERE
     ##
 ##
 
-
 class MenuManager():
 
-    def __init__(self, start_menu: Menu) -> None:
+    def __init__(self, start_menu: Menu|None = None) -> None:
         self.current = start_menu
     ##
 
     def set(self, menu: Menu) -> None:
         self.current = menu
     ##
+
+    def get_event(self, e: p.event.Event):
+        if self.current is not None:
+            self.current.get_event(e)
+    ##
+
+    def update(self, mouse_pos: Tuple[int, int]):
+        if self.current is not None:
+            self.current.update(mouse_pos)
+    ##
+
+    def draw(self, screen: p.Surface, auto_display: bool = True) -> None:
+        if self.current is not None:
+            self.current.draw(screen, auto_display)
+    ##
 ##
-
-#############
-## TESTING ##
-#############
-
-if __name__ == "__main__":
-    p.init()
-
-    WIDTH = HEIGHT = 512
-    BUTTONS_Y_SPACING = 100
-
-
-    screen = p.display.set_mode((WIDTH, HEIGHT))
-    clock = p.time.Clock()
-    screen.fill("white")
-
-    COMMON_ATTRIBUTES = {
-        "button_size": (100,20),
-        "fill_color": p.Color("white"),
-        "hover_fill_color": p.Color("black"),
-        "font": p.font.match_font('arial', bold=True),
-        "font_size": 13,
-        "text_color": 'black',
-        "hover_text_color": 'white',
-    }
-
-    play_btn = buttons.Button(
-        rect_attr = {"center": (WIDTH//2, HEIGHT//2 - BUTTONS_Y_SPACING)},
-        text= 'PLAY',
-        hover_text = "PLAY",
-        **COMMON_ATTRIBUTES
-    )
-    play_btn.call = lambda: print(play_btn.get_size()) # bound method
-
-    settings_btn = buttons.Button(
-        rect_attr={"center": (WIDTH//2, HEIGHT//2)},
-        text = "SETTINGS",
-        hover_text = "SETTINGS",
-        call = lambda: 0,
-        **COMMON_ATTRIBUTES
-    )
-
-    credits_btn = buttons.Button(
-        rect_attr={"center": (WIDTH//2, HEIGHT//2 + BUTTONS_Y_SPACING)},
-        text= "CREDITS",
-        hover_text= "CREDITS",
-        call = lambda: 0,
-        **COMMON_ATTRIBUTES
-    )
-
-    bts = buttons.ButtonGroup((
-        play_btn,
-        settings_btn,
-        credits_btn
-    )) 
-
-    menu = Menu(bts)
-    
-    running = True
-    while running:
-        for e in p.event.get():
-
-            bts.get_event(e)
-            if e.type == p.QUIT:
-                running = False
-        
-        mouse_pos = p.mouse.get_pos()
-        bts.draw(screen, mouse_pos)
-        menu.draw(screen, mouse_pos, auto_display=True)
-        p.display.flip()
