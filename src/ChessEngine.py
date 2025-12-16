@@ -180,7 +180,7 @@ class GameState():
         for i,j in [(move.start_row, move.start_col), (move.end_row, move.end_col)]:
             if (i,j) in self._WHITE_ROOKS_SPOTS.keys():
                 param = f'white_{self._WHITE_ROOKS_SPOTS[(i,j)]}_castle'
-                self.__setattr__(param, self.__getattribute__(param)+1) #TODO: understand this syntax
+                self.__setattr__(param, self.__getattribute__(param)+1)
             elif (i,j) in self._BLACK_ROOKS_SPOTS.keys():
                 param = f'black_{self._BLACK_ROOKS_SPOTS[(i,j)]}_castle'
                 self.__setattr__(param, self.__getattribute__(param)+1)
@@ -242,7 +242,7 @@ class GameState():
             for i,j in [(move.start_row, move.start_col), (move.end_row, move.end_col)]:
                 if (i,j) in self._WHITE_ROOKS_SPOTS.keys():
                     param = f'white_{self._WHITE_ROOKS_SPOTS[(i,j)]}_castle'
-                    self.__setattr__(param, self.__getattribute__(param)-1) #TODO: understand this syntax
+                    self.__setattr__(param, self.__getattribute__(param)-1)
                 elif (i,j) in self._BLACK_ROOKS_SPOTS.keys():
                     param = f'black_{self._BLACK_ROOKS_SPOTS[(i,j)]}_castle'
                     self.__setattr__(param, self.__getattribute__(param)-1)
@@ -251,16 +251,11 @@ class GameState():
                 rook_row = 0 if self.white_to_move else 7
                 self.board[rook_row, 3] = '--'
                 self.board[rook_row, 0] = f'{opp_col}R'
-                #full_col = 'black' if self.white_to_move else 'white'
-                #self.__setattr__(f'{full_col}_long_castle', self.__getattribute__(f'{full_col}_short_castle')-1)
             elif move.short_castle:
                 rook_row = 0 if self.white_to_move else 7
                 self.board[rook_row, 5] = '--'
                 self.board[rook_row, 7] = f'{opp_col}R'
-                #full_col = 'black' if self.white_to_move else 'white'
-                #self.__setattr__(f'{full_col}_long_castle', self.__getattribute__(f'{full_col}_long_castle')-1)
-
-
+                
             #return the move to the previous player
             self.white_to_move = not self.white_to_move
 
@@ -377,8 +372,7 @@ class GameState():
                 else: #literally every other piece, we need to cover the direction from which the check is coming
                     valid_squares += all_cells_check_direction
 
-                '''TODO: revise this logic, currently we allow our king to move in spots that are indeed check but in another direction from the one that is holding the check when we detect it'''
-                moves =  [move for move in moves if ((move.end_row, move.end_col) in valid_squares) ^ (move.piece_moved in ['wK', 'bK'])]
+                moves =  [move for move in moves if ((move.end_row, move.end_col) in valid_squares)]
             ##
 
             if len(self.checks) >= 2: #here we navigate double (or even more complex) checks. Basically, if you are under double check you are forced to move your king
@@ -540,6 +534,14 @@ class GameState():
         return self.get_rook_moves(r,c) + self.get_bishop_moves(r,c)
     ##
 
+    '''We evaluate if a given check move'''
+    def king_is_in_check(self, move) -> bool:
+        self.make_move(move); self.white_to_move = not self.white_to_move
+        in_check, _, _ = self.check_for_pins_and_checks()
+        self.undo_move(); self.white_to_move = not self.white_to_move
+        return in_check
+    ##
+
     '''We get all the possible king moves from king located at square [r,c]'''
     @clean_pinned_moves
     def get_king_moves(self, start_row:int, start_col:int) -> List[Tuple[Move, Tuple[int, int]]]:
@@ -548,15 +550,17 @@ class GameState():
 
         for i,j in directions:
             if all([0<=start_row+i<=7, 0<=start_col+j<=7]):
-                if self.board[start_row+i, start_col+j] == '--':
-                    moves.append((Move((start_row, start_col), (start_row+i, start_col+j), self), (i,j)))
+                move = Move((start_row, start_col), (start_row+i, start_col+j), self)
+                if self.board[start_row+i, start_col+j] == '--' and not self.king_is_in_check(move):
+                        moves.append((move, (i,j)))
 
-                elif (self.white_to_move) and (self.board[start_row+i,start_col+j][0] == 'b'):
-                    moves.append((Move((start_row, start_col), (start_row+i, start_col+j), self), (i,j)))
+                elif ((self.white_to_move) and (self.board[start_row+i,start_col+j][0] == 'b')) and not self.king_is_in_check(move):
+                        moves.append((move, (i,j)))
 
-                elif (not self.white_to_move) and (self.board[start_row+i,start_col+j][0] == 'w'):
-                    moves.append((Move((start_row, start_col), (start_row+i, start_col+j), self), (i,j)))
+                elif ((not self.white_to_move) and (self.board[start_row+i,start_col+j][0] == 'w')) and not self.king_is_in_check(move):
+                        moves.append((move, (i,j)))
 
+            # NEED TO BE CAREFUL WITH KING MOVES: ALWAYS NEED TO CHECK FOR EVENTUAL CHECKS IN PLACES IN WHICH WE MOVE
             
             #ADD CASTLING MOVES
             if (self.white_to_move) and (not self.in_check):
