@@ -123,14 +123,25 @@ class Button(p.sprite.Sprite, _KwargMixin):
     
     def render_text(self) -> Dict[str, p.Surface | None]:
         font, size = self.font, self.font_size # type: ignore #
-        if (font, size) not in LOADED_FONTS:
-            LOADED_FONTS[font, size] = p.font.Font(font, size)
-        self.font: p.font.Font = LOADED_FONTS[font, size]
+
+        '''try-catch clause allows us to recycle the code in case the font is already loaded'''
+        try:
+            if (font, size) not in LOADED_FONTS:
+                LOADED_FONTS[font, size] = p.font.Font(font, size)
+            self.font: p.font.Font = LOADED_FONTS[font, size]
+
+        except TypeError:
+            pass 
+        # at the moment we only catch the exception in which the font is already loaded (e.g when we need to let the color change text). So current sintax can be replaced in an equivalent manner with:
+        #       if not isinstance(self.font, p.font.Font):
+        #           if (font, size) ...
+
+
 
         '''These return boolean expressions. However by using such conditionals (with and) we also edit such char in-place if the first expression is not Null. Same logic is used in make_image() method below'''
-        text: p.Surface | None = self.text and self.font.render(self.text, 1, self.text_color) # type: ignore #
-        hover: p.Surface | None = self.hover_text and self.font.render(self.hover_text, 1, self.hover_text_color) # type: ignore #
-        disable: p.Surface | None = self.disable_text and self.font.render(self.disable_text, 1, self.disable_text_color) # type: ignore #
+        text: p.Surface | None = self.text and self.font.render(self.text, 1, self.text_color, self.fill_color) # type: ignore #
+        hover: p.Surface | None = self.hover_text and self.font.render(self.hover_text, 1, self.hover_text_color, self.hover_fill_color) # type: ignore #
+        disable: p.Surface | None = self.disable_text and self.font.render(self.disable_text, 1, self.disable_text_color, self.disable_fill_color) # type: ignore #
 
         return {"text": text, "hover": hover, "disable": disable}
     ##
