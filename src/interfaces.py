@@ -6,12 +6,21 @@ from utils_interfaces.menu import Menu, MenuManager
 p.init()
 
 
+
+'''Helper function that is needed for debug purposes only, add a breakpoint at print() line to have a debug waiting point while pressing a button'''
+def _wait():
+    print('WAITED!')
+##
+
+
+
 WIDTH = HEIGHT = 512
 BUTTONS_Y_SPACING = 100
 
 open_menu = Menu()
 settings_menu = Menu()
 credits_menu = Menu()
+all_menus = [open_menu, settings_menu, credits_menu]
 menu_manager = MenuManager(start_menu=open_menu)
 
 COMMON_ATTRIBUTES = {
@@ -52,8 +61,29 @@ open_menu.add(
     ]
 )
 
+
+theme_button = Button(
+    rect_attr = {"center": (WIDTH//2, HEIGHT//2 + BUTTONS_Y_SPACING)},
+    text = "THEME",
+    hover_text = "THEME",
+    call = lambda: 0,
+    **COMMON_ATTRIBUTES
+)
+#theme_button.call = lambda: theme_button._change_theme()
+theme_button.call = lambda: [i._change_theme() for i in all_menus]
+
 settings_menu.add(
     [
+        theme_button,
+
+        Button(
+            rect_attr = {"center": (WIDTH//2, HEIGHT//2)},
+            text= 'WAIT',
+            hover_text = "WAIT",
+            call = _wait,
+            **COMMON_ATTRIBUTES
+        ),
+
         Button(
             rect_attr = {"center": (WIDTH//2, HEIGHT//2 - BUTTONS_Y_SPACING)},
             text= 'BACK',

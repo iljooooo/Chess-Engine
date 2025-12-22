@@ -1,5 +1,5 @@
 import pygame as p
-from typing import Iterable, Tuple, Dict
+from typing import Dict, Iterable, Tuple, Literal
 import copy
 p.init()
 
@@ -32,6 +32,29 @@ BUTTON_DEFAULTS = {
         "active": True,
         "bindings": ()
 }
+
+
+_THEMES_SPECIFICS: Dict[str, Dict[str, p.Color | str | None]] = {
+    'light': {
+        'fill_color': p.Color('white'),
+        'hover_fill_color': p.Color('black'),
+        'disable_fill_color': None,
+        'text_color': p.Color('black'),
+        'hover_text_color' : p.Color('white'),
+        'disable_text_color': None 
+    },
+
+    'dark': {
+        'fill_color': p.Color('black'),
+        'hover_fill_color': p.Color('white'),
+        'disable_fill_color': None,
+        'text_color': p.Color('white'),
+        'hover_text_color' : p.Color('black'),
+        'disable_text_color': None 
+    }
+}
+'''We use this variable to store the info we need inside a solo variable. More themes can be added but at the moment we only rely on light and dark'''
+
 
 '''Helper function: accepts as input different ways of color formatting and always returns a pygame.Color object'''
 def _parse_color(col: str | p.Color | Tuple[int, int, int]) -> p.Color:
@@ -69,13 +92,12 @@ class _KwargMixin(object):
 ##
 
 #TODO: add some options to handle more complex graphical features: dropdown buttons menu, ecc...
-
 #TODO: adding hovering animations effect
 
 class Button(p.sprite.Sprite, _KwargMixin):
     
     """
-    INSTANTIATE A BUTTON OBJECT. We basically overwrite the p.Sprite object in order to have a better comprehension of what is happening
+    INSTANTIATE A BUTTON OBJECT. We basically override the p.Sprite object in order to have a better comprehension of what is happening.
     """
     #_invisible = p.Surface.convert_alpha(surface=_invisible)
     #_invisible.fill((0,0,0,0))
@@ -123,14 +145,25 @@ class Button(p.sprite.Sprite, _KwargMixin):
     
     def render_text(self) -> Dict[str, p.Surface | None]:
         font, size = self.font, self.font_size # type: ignore #
-        if (font, size) not in LOADED_FONTS:
-            LOADED_FONTS[font, size] = p.font.Font(font, size)
-        self.font: p.font.Font = LOADED_FONTS[font, size]
+
+        '''try-catch clause allows us to recycle the code in case the font is already loaded'''
+        try:
+            if (font, size) not in LOADED_FONTS:
+                LOADED_FONTS[font, size] = p.font.Font(font, size)
+            self.font: p.font.Font = LOADED_FONTS[font, size]
+
+        except TypeError:
+            pass 
+        # at the moment we only catch the exception in which the font is already loaded (e.g when we need to let the color change text). So current sintax can be replaced in an equivalent manner with:
+        #       if not isinstance(self.font, p.font.Font):
+        #           if (font, size) ...
+
+
 
         '''These return boolean expressions. However by using such conditionals (with and) we also edit such char in-place if the first expression is not Null. Same logic is used in make_image() method below'''
-        text: p.Surface | None = self.text and self.font.render(self.text, 1, self.text_color) # type: ignore #
-        hover: p.Surface | None = self.hover_text and self.font.render(self.hover_text, 1, self.hover_text_color) # type: ignore #
-        disable: p.Surface | None = self.disable_text and self.font.render(self.disable_text, 1, self.disable_text_color) # type: ignore #
+        text: p.Surface | None = self.text and self.font.render(self.text, 1, self.text_color, self.fill_color) # type: ignore #
+        hover: p.Surface | None = self.hover_text and self.font.render(self.hover_text, 1, self.hover_text_color, self.hover_fill_color) # type: ignore #
+        disable: p.Surface | None = self.disable_text and self.font.render(self.disable_text, 1, self.disable_text_color, self.disable_fill_color) # type: ignore #
 
         return {"text": text, "hover": hover, "disable": disable}
     ##
@@ -204,6 +237,60 @@ class Button(p.sprite.Sprite, _KwargMixin):
     def get_size(self) -> Tuple[int, int]:
         return self.button_size
     ##
+
+
+    def _get_theme(self) -> Literal['light', 'dark'] | None:
+        if all([
+            self.fill_color == p.Color('white'),
+        ]):
+            return 'light'
+        
+        elif([
+            self.fill_color == p.Color('black')
+        ]):
+            return 'dark'
+    ##
+
+    def _set_theme(self, theme: Literal['light', 'dark']) -> None:
+        
+        _THEMES_SPECIFICS['default'] = {
+            'fill_color': self.fill_color,
+            'hover_fill_color': self.hover_fill_color,
+            'disable_fill_color': self.disable_fill_color,
+            'text_color': self.text_color,
+            'hover_text_color' : self.hover_text_color,
+            'disable_text_color': self.disable_text_color 
+        }
+
+        for key,val in _THEMES_SPECIFICS.get(theme, 'default').items():
+            setattr(self, key, val)
+            #setattr(self, key, _parse_color(val))
+        ##
+
+        rendered = self.render_text()
+        self.idle_image = self.make_image(
+            self.fill_color,    # type: ignore #
+            None,
+            rendered["text"]    # type: ignore #
+        )
+        self.hover_image = self.make_image(
+            self.hover_fill_color,   # type: ignore #
+            None,
+            rendered["hover"],  # type: ignore #
+        )
+        self.disable_image = self.make_image(
+            self.disable_fill_color, # type: ignore #
+            None,
+            rendered["text"]    # type: ignore #
+        )
+    ##
+
+    def _change_theme(self) -> None:
+        if self._get_theme() == 'light':
+            self._set_theme('dark')
+        elif self._get_theme() == 'dark':
+            self._set_theme('light')
+    ##
 ##
 
 class ButtonGroup(p.sprite.Group):
@@ -222,3 +309,4 @@ class ButtonGroup(p.sprite.Group):
             button.update(mouse_pos)
             button.draw(screen)
     ##
+##

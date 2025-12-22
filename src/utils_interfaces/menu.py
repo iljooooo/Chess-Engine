@@ -1,9 +1,19 @@
-import sys
-from typing import List, Tuple, Iterable, Callable
+from typing import Dict, Iterable, Literal, Tuple
 import pygame as p
-from utils_interfaces.buttons import Button, ButtonGroup, _parse_color
+from utils_interfaces.buttons import Button, _parse_color
 p.init()
 
+
+_THEMES_SPECIFICS: Dict[str, Dict[str, p.Color | str | None]] = {
+    'light': {
+        'background_color': p.Color('white')
+    },
+
+    'dark': {
+        'background_color': p.Color('black')
+    }
+}
+##
 
 class Menu(p.sprite.Group):
 
@@ -45,6 +55,47 @@ class Menu(p.sprite.Group):
             pass
             #TODO: COMPLETE HERE
     ##
+
+    def _get_theme(self) -> Literal['light', 'dark'] | None:
+        if all([
+            self.background_color == p.Color('white'),
+            all([i._get_theme()=='light' for i in self.sprites()])
+        ]):
+            return 'light'
+        
+        elif all([
+            self.background_color == p.Color('black'),
+            all([i._get_theme()=='dark' for i in self.sprites()])
+        ]):
+            return 'dark'
+    ##
+
+
+
+    def _set_theme(self, theme: Literal['light', 'dark']) -> None:
+        
+        _THEMES_SPECIFICS['default'] = {
+            'background_color': self.background_color
+        }
+
+        for key,val in _THEMES_SPECIFICS.get(theme, 'default').items():
+            setattr(self, key, val)
+        ##
+
+        for btn in self.sprites():
+            btn._change_theme()
+        ##
+
+        self.update(p.mouse.get_pos())
+    ##
+
+
+    def _change_theme(self) -> None:
+        if self._get_theme() == 'light':
+            self._set_theme('dark')
+        elif self._get_theme() == 'dark':
+            self._set_theme('light')
+    ##
 ##
 
 class MenuManager():
@@ -71,4 +122,18 @@ class MenuManager():
         if self.current is not None:
             self.current.draw(screen, auto_display)
     ##
+
+    def _get_theme(self) -> Literal['light', 'dark'] | None:
+        pass
+    ##
+
+    def _set_theme(self, theme) -> None:
+        pass
+    ##
+
+    def _change_theme(self) -> None:
+        pass
+    ##
 ##
+
+## THEMES HANDLING

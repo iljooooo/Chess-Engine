@@ -7,11 +7,6 @@ from typing import Tuple, Optional, Union, List, Callable, Literal
 import sys
 sys.path.append('/Users/simone/Library/Python/3.13/lib/python/site-packages')
 
-import pygamepopup # pyright: ignore[reportMissingImports]
-from pygamepopup.menu_manager import MenuManager  # pyright: ignore[reportMissingImports]
-from pygamepopup.components import Button, InfoBox # pyright: ignore[reportMissingImports]
-
-
 #fixing pixels related parameters
 p.init() #just to be sure it gets initialized, probably redundant
 WIDTH = HEIGHT = 512 #if got some problem just use 400
@@ -32,7 +27,6 @@ def load_images():
 
 def main():
     p.init()
-    pygamepopup.init()
     screen = p.display.set_mode((WIDTH, HEIGHT))
     clock = p.time.Clock()
     screen.fill(p.Color("white"))
@@ -184,61 +178,6 @@ def draw_pieces(screen: p.Surface, gs: ChessEngine.GameState) -> None:
 ##
 
 
-def promotion(func: Callable):
-    def wrapper() -> Optional[Callable]:
-        pass
-    return wrapper
-##
-
-
-'''Method that is needeed to print to screen the choices in order to let the player decide what to promote the pawn to'''
-class PawnPromotionScreen():
-
-    def __init__(self, screen: p.Surface, gs: ChessEngine.GameState, move: ChessEngine.Move) -> None:
-        self.screen = screen
-        self.menu_manager = MenuManager(screen)
-        self.exit_request = False
-
-        self.create_main_menu_interface()
-    ##
-
-    def create_main_menu_interface(self):
-        main_menu = InfoBox(
-            "Test Menu", 
-            [
-                [Button(title="Q",callback=lambda: self.promote_to_queen())],
-                [Button(title="N", callback=lambda: self.promote_to_rook())],
-                [Button(title='B', callback= lambda: self.promote_to_bishop())],
-                [Button(title='R')]
-            ],
-
-            has_close_button=False,
-        )
-        self.menu_manager.open_menu(main_menu)
-    ##
-
-    def promote_to_queen(self):
-        pass
-    ##
-
-    def promote_to_rook(self):
-        pass
-    ##
-
-    def promote_to_bishop(self):
-        pass
-    ##
-
-    def display(self) -> None:
-        self.menu_manager.display()
-        p.display.update()
-    ##
-
-    def click(self, button: int, position: p.Vector2) -> bool:
-        self.menu_manager.click(button, position)
-        return self.exit_request
-##
-
 PAWN_PROMOTION_HEIGHT = HEIGHT // 8
 PAWN_PROMOTION_WIDTH = PAWN_PROMOTION_HEIGHT * 4
 BOX_HEIGHT = 3*PAWN_PROMOTION_HEIGHT
@@ -250,14 +189,13 @@ PAWN_PROMOTION_INIT_X = (WIDTH - PAWN_PROMOTION_WIDTH) // 2
 PAWN_PROMOTION_INIT_Y = (HEIGHT - PAWN_PROMOTION_HEIGHT) // 2
 
 
+#this is suboptimal (we open different loops, bad environment)
 def handle_pawn_promotion(screen: p.Surface, game: ChessEngine.GameState, move: ChessEngine.Move) -> Literal['--', 'wQ', 'wR', 'wN', 'wB', 'bQ', 'bR', 'bN', 'bB']:
     
     pieces = ['Q', 'R', 'B', 'N']
     col: Literal['w', 'b'] = move.piece_moved[0]
     promotion_figures: List[Literal['--', 'wQ', 'wR', 'wN', 'wB', 'bQ', 'bR', 'bN', 'bB']] = [col + i for i in pieces]  # pyright: ignore[reportAssignmentType]
 
-    # drawing the panel
-    #screen.fill('white')
     p.draw.rect(screen, 'black', p.Rect(BOX_INIT_X, BOX_INIT_Y, BOX_WIDTH, BOX_HEIGHT))
 
     for i, piece in enumerate(promotion_figures):

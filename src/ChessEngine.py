@@ -6,7 +6,7 @@ from typing import Union, Tuple, Dict, List, Callable, Optional, Any, Literal
 
 class Move():
     
-    #fixed dicts to use when translating moves in a more standard notation
+    #fixed dicts to use when translating moves in standard chess notation
     RANKS_TO_ROWS: Dict[str, int] = {f'{i}': 8-i for i in range(1,9)}
     ROWS_TO_RANKS: Dict[int, str] = {v: k for k,v in RANKS_TO_ROWS.items()}
     FILES_TO_COLS: Dict[str, int] = {'abcdefgh'[i]: i for i in range(8)}
@@ -35,10 +35,8 @@ class Move():
     def get_chess_notation(self) -> str:
         if self.short_castle:
             return 'OO'
-        
         if self.long_castle:
             return 'OOO'
-
         ep_string = 'ep' if self.en_passant else ''
         return self.get_rank_file(self.start_row, self.start_col) + self.get_rank_file(self.end_row, self.end_col) + ep_string
     ##
