@@ -12,7 +12,17 @@ class Move():
     FILES_TO_COLS: Dict[str, int] = {'abcdefgh'[i]: i for i in range(8)}
     COLS_TO_FILES: Dict[int, str] = {v: k for k,v in FILES_TO_COLS.items()}
 
-    def __init__(self, start_square: Tuple[int, int], end_square: Tuple[int, int], game, en_passant: Optional[bool] = False, short_castle: Optional[bool] = False, long_castle: Optional[bool] = False, pawn_promotion: Tuple[bool, Literal['--', 'wQ', 'wR', 'wN', 'wB', 'bQ', 'bR', 'bN', 'bB']] = (False, '--'), which_promotion: str = '') -> None:
+    def __init__(
+            self,
+            start_square: Tuple[int, int], 
+            end_square: Tuple[int, int], 
+            game, 
+            en_passant: Optional[bool] = False, 
+            short_castle: Optional[bool] = False, 
+            long_castle: Optional[bool] = False, 
+            pawn_promotion: Tuple[bool, str] = (False, '--')
+    ) -> None:
+
         self.start_row = start_square[0]
         self.start_col = start_square[1]
         self.end_row = end_square[0]
@@ -25,7 +35,6 @@ class Move():
         self.short_castle = short_castle
         self.long_castle = long_castle
         self.pawn_promotion = pawn_promotion
-        self.which_promotion = which_promotion
     ##
 
     def __repr__(self) -> str:
@@ -384,8 +393,10 @@ class GameState():
         if len(moves)==0:
             if self.in_check:
                 self.checkmate = True
+                print(f'!! PLAYER WINS BY CHECKMATE !!')
             else:
                 self.stalemate = True
+                print(f'!! STALEMATE !!')
         else:
             self.checkmate = False
             self.stalemate = False
@@ -427,8 +438,9 @@ class GameState():
         opp_color: str = 'b' if self.white_to_move else 'w'
 
         if self.board[r+i,c] == '--':
-            promotion = (True, '--') if r+i in [0,7] else (False, '--')
-            moves.append((Move((r,c), (r+i,c), self, pawn_promotion=promotion), dir))
+            promotion = [(True, self.col() + piece) if piece!='--' else (True, '--') for piece in ['--', 'R', 'Q', 'N', 'B']] if r+i in [0,7] else [(False, '--')]
+            for move in promotion:
+                moves.append((Move((r,c), (r+i,c), self, pawn_promotion=move), dir))
 
             if (r == pawns_starting_row) and (self.board[r+(2*i), c] == '--'):
                 moves.append((Move((r,c), (r+(2*i), c), self), dir)) #double pushes can never result in promotion
@@ -436,15 +448,14 @@ class GameState():
         diags = [(i,1), (i,-1)]
         for diag_i, diag_j in diags:
             if all([0<=r+diag_i<=7, 0<=c+diag_j<=7]):
-                promotion = (True, '--') if r+diag_i in [0,7] else (False, '--')
-                if (self.board[r+diag_i, c+diag_j][0] == opp_color): 
-                    moves.append((Move((r,c), (r+diag_i, c+diag_j), self, pawn_promotion=promotion), (diag_i, diag_j)))
+                promotion = [(True, self.col() + piece) if piece!='--' else (True, '--') for piece in ['--', 'R', 'Q', 'N', 'B']] if r+i in [0,7] else [(False, '--')]
+                if (self.board[r+diag_i, c+diag_j][0] == opp_color):
+                    for move in promotion: 
+                        moves.append((Move((r,c), (r+diag_i, c+diag_j), self, pawn_promotion=move), (diag_i, diag_j)))
 
                 if [(r,c), (diag_i, diag_j)] in self.en_passant: #if en-passant is allowed, we add
                     moves.append((Move((r,c), (r+diag_i, c+diag_j), self, en_passant=True), (diag_i, diag_j))) #en passant can never result in a promotion
                     pass
-
-        #TODO: add en-passant and pawn promotion (probably pawn promotion needs to be added in the move module, at the end of the turn?)
         return moves
     ##
 
@@ -581,8 +592,23 @@ class GameState():
         return moves
     ##
 
-    def get_castling_moves(self):
-        pass
+    ###################
+    ## UTILS SECTION ##
+    ###################
+
+    def col(self) -> Literal['b', 'w']:
+        return 'w' if self.white_to_move else 'b'
+    ##
+
+    def opp_col(self) -> Literal['b', 'w']:
+        return 'b' if self.white_to_move else 'w'
+    ##
+
+    def full_col(self) -> Literal['white', 'black']:
+        return 'white' if self.white_to_move else 'black'
+    
+    def opp_full_col(self) -> Literal['white', 'black']:
+        return 'black' if self.white_to_move else 'white'
     ##
 ##
 

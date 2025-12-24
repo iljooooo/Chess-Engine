@@ -11,8 +11,9 @@ The project is written in pure Python using the pygame library and its extension
 The project was created as a little funny snippet in order to familiarize a little bit with a codebase a little more complex than a school-level snippet. More details will emerge as the project grow in dimension, stay tuned!
 
 ## CURRENT TODO LIST
-At current staeg, these are the following operations that I plan to add in the nearby future:
+At current stage, these are the following operations that I plan to add in the nearby future:
 - Introduce more complex graphical elements standard, like buttons that open settings environment (curtain button?)
+- Improve the theme handling by directly accessing single constant variables defined in the global env.
 - Complete the settings menu, introduce global control over some graphical informations about the pieces
 - Review current pawn promotion move handling: at current stage, the 'CPU' is not able to see the potential of promotion, the logic is handled in the ChessMain.py. This may cause problems during the development of AI aiming to play the game
 - Interlace ChessMain.py with the current main.py file, specifically let global graphical details being handled by the main, while being adapted by the already working code in ChessMain
