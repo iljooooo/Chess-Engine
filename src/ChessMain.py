@@ -7,6 +7,46 @@ from typing import Tuple, Optional, Union, List, Callable, Literal
 import sys
 sys.path.append('/Users/simone/Library/Python/3.13/lib/python/site-packages')
 
+
+'''ALL OF THE FOLLOWING CODE MUST BE INTENDED AS PSEUDOCODE, AND YET HAS TO BE ADAPTED TO OUR NEEDS'''
+DEFAULT_SETTINGS = {}
+class Game():
+
+    def __init__(
+        self,
+        player1: int = 0,
+        player2: int = 0,
+        themes_settings: dict = DEFAULT_SETTINGS) -> None:
+
+        # control flow and logic
+        '''Player are flagged as player/AI by an integer spanning from 0 to xx (yet to be defined), where 0 identifies human player, while numbers 1 to xx identify AIs at different levels. It is still unknown whether these values describe the network model at different stages of training, or if different algorithms will be used to distinguish between different levels. Maybe, a mixture of the 2 approaches will be present, even though this is still unclear. The 0/int design option allows for an easier flow control with basic ifs.'''
+        self.player1: int
+        self.player2: int
+        self.game: ChessEngine.GameState = ChessEngine.GameState()
+
+        # graphical elements
+        self.possible_reaching_squares: Tuple[int, int] | None = None
+        self.check_square: Tuple[int, int] | None = None
+        #load_images(DEFAULT_SETTINGS)
+
+        pass
+    ##
+
+    def play(self) -> None:
+        pass
+    ##
+
+    def update(self) -> None:
+        pass
+    ##
+
+    def draw(self) -> None:
+        pass
+    ##
+
+    pass
+##
+
 #fixing pixels related parameters
 p.init() #just to be sure it gets initialized, probably redundant
 WIDTH = HEIGHT = 512 #if got some problem just use 400
@@ -108,6 +148,8 @@ def main():
         p.display.flip()
 ##
 
+
+
 ##############################
 ### GRAPHICS FEATURES CODE ###
 ##############################
@@ -193,8 +235,8 @@ PAWN_PROMOTION_INIT_Y = (HEIGHT - PAWN_PROMOTION_HEIGHT) // 2
 def handle_pawn_promotion(screen: p.Surface, game: ChessEngine.GameState, move: ChessEngine.Move) -> Literal['--', 'wQ', 'wR', 'wN', 'wB', 'bQ', 'bR', 'bN', 'bB']:
     
     pieces = ['Q', 'R', 'B', 'N']
-    col: Literal['w', 'b'] = move.piece_moved[0]
-    promotion_figures: List[Literal['--', 'wQ', 'wR', 'wN', 'wB', 'bQ', 'bR', 'bN', 'bB']] = [col + i for i in pieces]  # pyright: ignore[reportAssignmentType]
+    #col: Literal['w', 'b'] = move.piece_moved[0]
+    promotion_figures: List[Literal['--', 'wQ', 'wR', 'wN', 'wB', 'bQ', 'bR', 'bN', 'bB']] = [game.col() + i for i in pieces]  # pyright: ignore[reportAssignmentType]
 
     p.draw.rect(screen, 'black', p.Rect(BOX_INIT_X, BOX_INIT_Y, BOX_WIDTH, BOX_HEIGHT))
 
