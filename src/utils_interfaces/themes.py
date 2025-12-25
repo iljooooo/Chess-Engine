@@ -1,1 +1,0 @@
-'''File to handle color changes between different files'''

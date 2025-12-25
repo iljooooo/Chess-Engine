@@ -98,6 +98,11 @@ class Menu(p.sprite.Group):
     ##
 ##
 
+
+
+'''MenuManager class: implemented in order to have an easier control on different graphical elements in a game. It becomes useful since we basically can run a minimal main code, and do not have to always display different menus with overlapping elements in order to obtain the result. The main feature of the MenuManager are two command:
+    
+    - update() reads events thanks to pygame'''
 class MenuManager():
 
     def __init__(self, start_menu: Menu|None = None) -> None:

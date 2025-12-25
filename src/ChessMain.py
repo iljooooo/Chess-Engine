@@ -7,218 +7,17 @@ from typing import Tuple, Optional, Union, List, Callable, Literal
 import sys
 sys.path.append('/Users/simone/Library/Python/3.13/lib/python/site-packages')
 
-
-'''ALL OF THE FOLLOWING CODE MUST BE INTENDED AS PSEUDOCODE, AND YET HAS TO BE ADAPTED TO OUR NEEDS'''
-DEFAULT_SETTINGS = {}
-class Game():
-
-    def __init__(
-        self,
-        player1: int = 0,
-        player2: int = 0,
-        themes_settings: dict = DEFAULT_SETTINGS) -> None:
-
-        # control flow and logic
-        '''Player are flagged as player/AI by an integer spanning from 0 to xx (yet to be defined), where 0 identifies human player, while numbers 1 to xx identify AIs at different levels. It is still unknown whether these values describe the network model at different stages of training, or if different algorithms will be used to distinguish between different levels. Maybe, a mixture of the 2 approaches will be present, even though this is still unclear. The 0/int design option allows for an easier flow control with basic ifs.'''
-        self.player1: int
-        self.player2: int
-        self.game: ChessEngine.GameState = ChessEngine.GameState()
-
-        # graphical elements
-        self.possible_reaching_squares: Tuple[int, int] | None = None
-        self.check_square: Tuple[int, int] | None = None
-        #load_images(DEFAULT_SETTINGS)
-
-        pass
-    ##
-
-    def play(self) -> None:
-        pass
-    ##
-
-    def update(self) -> None:
-        pass
-    ##
-
-    def draw(self) -> None:
-        pass
-    ##
-
-    pass
-##
-
-#fixing pixels related parameters
-p.init() #just to be sure it gets initialized, probably redundant
-WIDTH = HEIGHT = 512 #if got some problem just use 400
-DIMENSION = 8 
+WIDTH = 512
+HEIGHT = 512 #if got some problem just use 400
+MAX_FPS = 15
+DIMENSION = 8
 SQ_SIZE = HEIGHT // DIMENSION
-MAX_FPS = 15 #used for animations
-IMAGES = {}
 
-'''
-Initialize a global dictionaries of images. We do this exactly one time because loading images with pygame is a kinda expensive feature, so we only want to do this once.
-'''
-def load_images():
-    #TODO: adjust (SQ_SIZE, SQ_SIZE) with slightly refactored quantities
-    for piece in ['wP', 'wR', 'wK', 'wQ', 'wN', 'wB', 'bP', 'bR', 'bN', 'bB', 'bK', 'bQ']:
-        IMAGES[piece] = p.transform.scale(p.image.load(f'images/{piece}.png'), (SQ_SIZE, SQ_SIZE))
-##
-
-
-def main():
-    p.init()
-    screen = p.display.set_mode((WIDTH, HEIGHT))
-    clock = p.time.Clock()
-    screen.fill(p.Color("white"))
-    pawn_promotion_scene = None
-
-    game = ChessEngine.GameState() #we initialize game as our primary object
-    valid_moves: List[ChessEngine.Move] = game.get_valid_moves() #these are moves possible at the very beginning
-    move_made: bool = False #This little exit_flag logic is used to avoid generating moves after every loop, saving time
-    #print(game.board)
-
-    load_images() #actually load the images 
-    draw_game_state(screen, game) #draw initial board config
-    
-    #this loops basically keeps the game running, it handles events happening or whatever
-    running = True
-    sq_selected: Union[Tuple[int, int], Tuple[()]] = () #keeps track of the last click of the user
-    player_clicks: List[Tuple] = [] #keeps track of couples of players input. Basically is needed to update pieces inside of the board
-
-    while(running):
-        for e in p.event.get():
-            if e.type == p.QUIT:
-                running = False
-
-            ## MOUSE HANDLER
-            if pawn_promotion_scene:
-                pass
-
-            elif e.type == p.MOUSEBUTTONDOWN:
-                location = p.mouse.get_pos() 
-                col, row = location[0]//SQ_SIZE, location[1]//SQ_SIZE 
-                
-                if sq_selected == (row,col):
-                    sq_selected = () #we deselect if the same click is given as an input twice
-                    player_clicks = []
-                
-                else:
-                    sq_selected = (row, col)
-                    player_clicks.append(sq_selected) #record the values
-
-                if (len(player_clicks) == 1):
-                    if game.board[row, col] == '--':
-                        sq_selected = ()
-                        player_clicks = []
-
-                #update with the move if necessary, we move after the second input
-                if len(player_clicks) == 2:
-                    move = ChessEngine.Move(player_clicks[0], player_clicks[1], game)
-                    
-                    for engine_move in valid_moves:
-                        if move == engine_move:
-                            if engine_move.pawn_promotion[0]:
-                                engine_move.pawn_promotion = (True, handle_pawn_promotion(screen, game, engine_move)) # we first want to handle pawn promotion separately in order to interact correctly with the game
-
-                            game.make_move(engine_move)
-                            print(engine_move)
-                            move_made = True
-                            sq_selected = ()
-                            player_clicks = []
-
-                            break
-
-                    else:
-                        player_clicks = [sq_selected]
-
-            ## KEYBOARD EVENTS HANDLER
-            if e.type == p.KEYDOWN:
-                if e.key == p.K_z:
-                    game.undo_move()
-                    move_made = True
-                    sq_selected = ()
-                    player_clicks = []
-
-        if move_made:
-            valid_moves = game.get_valid_moves()
-            move_made = False
-        
-        draw_game_state(screen, game, highlighted=(sq_selected), moves=valid_moves)
-        clock.tick(MAX_FPS)
-        p.display.flip()
-##
-
-
-
-##############################
-### GRAPHICS FEATURES CODE ###
-##############################
-
-#TODO: add a menu and some possibility to add some settings
-#TODO: check animation (red highlighted king pos)
 
 GRAPHICS_PALETTE = [p.Color("white"), p.Color("gray")]
 HIGHLIGHT_COLOR = p.Color("chocolate4")
 LIGHT_HIGHLIGHT_COLOR = [p.Color("burlywood1"), p.Color("burlywood")]
 CHECK_HIGHLIGHT_COLOR = p.Color("red")
-
-
-def draw_game_state(screen: p.Surface, gs: ChessEngine.GameState, highlighted: Optional[Union[Tuple[int, int], Tuple[()]]] = None, moves=None) -> None:
-    '''
-    Method that simply draws things down in a dynamical manner. Relies on the two helpers method cited below. It returns nothing, it just edits current status of the display provided as parameter.
-    '''
-    draw_board(screen, gs, highlighted, moves) #we first draw the skeleton
-    draw_pieces(screen, gs) #and we place the pieces on top of it
-    pass
-##
-
-def draw_board(screen: p.Surface, game: ChessEngine.GameState, highlighted: Optional[Union[Tuple[int, int], Tuple[()]]], moves: Optional[List[ChessEngine.Move]] = None) -> None:
-    '''Handles the drawing board squares (basically the skeleton)'''
-
-    possible_reaching_squares = [(move.end_row, move.end_col) for move in moves if (move.start_row, move.start_col)==highlighted] if moves is not None else []
-
-    check_square: Tuple[int, int] = (-1,-1)
-    if game.in_check:
-        check_square = game.white_king_pos if game.white_to_move else game.black_king_pos
-
-    for r in range(DIMENSION):
-        for c in range(DIMENSION):
-            color = GRAPHICS_PALETTE[((r+c)%2)]
-            HIGHLIGHT_COLOR = LIGHT_HIGHLIGHT_COLOR[((r+c)%2)]                
-
-            # highlighted square
-            if (r,c) == highlighted: 
-                col_to_move = 'w' if game.white_to_move else 'b'
-                if game.board[r,c][0] == col_to_move: #if selected square is one of the pieces to move
-                    p.draw.rect(screen, HIGHLIGHT_COLOR, p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
-                else:
-                    p.draw.rect(screen, color, p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
-
-            # possible moves squares
-            elif (r,c) in possible_reaching_squares:
-                p.draw.rect(screen, HIGHLIGHT_COLOR, p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
-
-            elif (r,c) == check_square:
-                p.draw.rect(screen, CHECK_HIGHLIGHT_COLOR, p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
-
-            # all the remainder
-            else:
-                p.draw.rect(screen, color, p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
-    pass
-##
-
-def draw_pieces(screen: p.Surface, gs: ChessEngine.GameState) -> None:
-    '''
-    Draw the pieces on the board based on current GameState.board object passed as parameter.
-    '''
-    for r in range(DIMENSION):
-        for c in range(DIMENSION):
-            piece = gs.board[r,c]
-            if piece != '--': #if the cell is not empty
-                screen.blit(IMAGES[piece], p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
-    pass
-##
-
 
 PAWN_PROMOTION_HEIGHT = HEIGHT // 8
 PAWN_PROMOTION_WIDTH = PAWN_PROMOTION_HEIGHT * 4
@@ -231,43 +30,217 @@ PAWN_PROMOTION_INIT_X = (WIDTH - PAWN_PROMOTION_WIDTH) // 2
 PAWN_PROMOTION_INIT_Y = (HEIGHT - PAWN_PROMOTION_HEIGHT) // 2
 
 
-#this is suboptimal (we open different loops, bad environment)
-def handle_pawn_promotion(screen: p.Surface, game: ChessEngine.GameState, move: ChessEngine.Move) -> Literal['--', 'wQ', 'wR', 'wN', 'wB', 'bQ', 'bR', 'bN', 'bB']:
-    
-    pieces = ['Q', 'R', 'B', 'N']
-    #col: Literal['w', 'b'] = move.piece_moved[0]
-    promotion_figures: List[Literal['--', 'wQ', 'wR', 'wN', 'wB', 'bQ', 'bR', 'bN', 'bB']] = [game.col() + i for i in pieces]  # pyright: ignore[reportAssignmentType]
+'''ALL OF THE FOLLOWING CODE MUST BE INTENDED AS PSEUDOCODE, AND YET HAS TO BE ADAPTED TO OUR NEEDS'''
+DEFAULT_SETTINGS = {}
+class Game():
 
-    p.draw.rect(screen, 'black', p.Rect(BOX_INIT_X, BOX_INIT_Y, BOX_WIDTH, BOX_HEIGHT))
+    def __init__(
+            self,
+            player1: int = 0,
+            player2: int = 0,
+            themes_settings: dict = DEFAULT_SETTINGS,
+            IMAGES = {},
+    ) -> None:
+        
+        # control flow and logic
+        '''Player are flagged as player/AI by an integer spanning from 0 to xx (yet to be defined), where 0 identifies human player, while numbers 1 to xx identify AIs at different levels. It is still unknown whether these values describe the network model at different stages of training, or if different algorithms will be used to distinguish between different levels. Maybe, a mixture of the 2 approaches will be present, even though this is still unclear. The 0/int design option allows for an easier flow control with basic ifs.'''
+        self.player1: int
+        self.player2: int
+        self.game: ChessEngine.GameState = ChessEngine.GameState()
+        self.move_made: bool = True #has to be instantiated as true so we first draw the board
+        self.valid_moves: List[ChessEngine.Move] = []
+        
 
-    for i, piece in enumerate(promotion_figures):
-         p.draw.rect(screen, GRAPHICS_PALETTE[i%2], p.Rect(PAWN_PROMOTION_INIT_X + i*PAWN_PROMOTION_HEIGHT, PAWN_PROMOTION_INIT_Y, PAWN_PROMOTION_HEIGHT, PAWN_PROMOTION_HEIGHT))
+        # graphical elements
+        self.WIDTH = WIDTH,
+        self.HEIGHT = HEIGHT,
+        self.MAX_FPS = MAX_FPS,
+        
+        self.IMAGES = {}; self.load_images()
+        self.pawn_promotion_animation = False
 
-         screen.blit(IMAGES[piece], p.Rect(PAWN_PROMOTION_INIT_X + i*PAWN_PROMOTION_HEIGHT, PAWN_PROMOTION_INIT_Y, PAWN_PROMOTION_HEIGHT, PAWN_PROMOTION_HEIGHT))
+        self.selected_square: Tuple[int, int] | Tuple[()] = ()
+        self.player_clicks: List[Tuple[int, int]] = []
+        pass
+    ##
 
-    p.display.update()
+    def load_images(self) -> None:
+        PATH = '/Users/simone/Desktop/projects/Chess Engine/images/'
+        for piece in ['wP', 'wR', 'wN', 'wB', 'wQ', 'wK', 'bP', 'bR', 'bN', 'bB', 'bQ', 'bK']:
+            self.IMAGES[piece] = p.image.load(PATH+piece+'.png')
+    ##
 
-    # handling the exit event
-    exit_request: bool = False
-    while not exit_request:
-        for e in p.event.get():
-            if e.type == p.MOUSEBUTTONDOWN:
-                loc = p.mouse.get_pos()
-                x, y = loc[0], loc[1]
+    def play(self) -> None:
+        pass
+    ##
 
-                x = loc[0] - PAWN_PROMOTION_INIT_X
-                y = loc[1] - PAWN_PROMOTION_INIT_Y
+    '''We use this method to collect eventual events. We use this method to store changes, while self.update() to actually update the graphical features inside the surface. This is coherent to everything we have done up to date, also with the other GUI elements.'''
+    def get_event(
+            self,
+            e: p.event.Event
+    ) -> None:
+        
+        if e.type == p.QUIT:
+            self.game.checkmate = True #TODO: edit this, rn just to avoid infinite looping
+        ##
+         
+        if e.type == p.MOUSEBUTTONDOWN:
+            location = p.mouse.get_pos() 
+            col, row = location[0]//SQ_SIZE, location[1]//SQ_SIZE #TODO: ADD SELECTED ROW, SELECTED COL
+            
+            if self.selected_square == (row,col):
+                self.selected_square = () #we deselect if the same click is given as an input twice
+                self.player_clicks = []
+            
+            else:
+                self.selected_square = (row, col)
+                self.player_clicks.append(self.selected_square) #record the values
+        ##
 
-                if(all([0<=x<=PAWN_PROMOTION_WIDTH, 0<=y<=PAWN_PROMOTION_HEIGHT])):
-                    x:int = x//PAWN_PROMOTION_HEIGHT
-                    return promotion_figures[x]
-                    exit_request = not exit_request
+        if e.type == p.KEYDOWN and e.key == p.K_z:
+            self.game.undo_move()
+            self.move_made = True
+            self.selected_square = ()
+            self.player_clicks = []
+        ##
+    ##
+
+    '''See self.get_event() for further details about what we have done'''
+    def update(
+            self,
+            mouse_pos: Tuple[int, int]      # introduced just to add consistency with menu_manager type objects
+    ) -> None:
+        
+        #if a move has been made, we handle the case in which next move must be made by AI, etc...
+        if self.move_made:
+            self.valid_moves = self.game.get_valid_moves()
+
+            if 'AI_TO_MOVE':
+                self.game.make_random_move(self.valid_moves)
+            else:
+                self.move_made = False
+        
+        ## if a move has been done, we need to monitor the output and do graphical handling
+        else:
+            if (len(self.player_clicks) == 1):
+                if self.game.board[self.player_clicks[0][0], self.player_clicks[0][1]] == '--':
+                    self.selected_square = ()
+                    self.player_clicks = []
+            
+            #still a bad pawn promotion logic!!
+            if len(self.player_clicks) == 2:
+                    move = ChessEngine.Move(
+                        self.player_clicks[0], 
+                        self.player_clicks[1], 
+                        self.game
+                    )
+                    
+                    for engine_move in self.valid_moves:
+                        if move == engine_move:
+                            if engine_move.pawn_promotion[0]:
+                                #engine_move.pawn_promotion = (True, handle_pawn_promotion(screen, self.game, engine_move)) # we first want to handle pawn promotion separately in order to interact correctly with the game
+                                pass
+
+                            self.game.make_move(engine_move)
+                            print(engine_move)
+                            self.move_made = True
+                            self.selected_square = ()
+                            self.player_clicks = []
+
+                            break
+
+                    else:
+                        self.player_clicks = [self.selected_square] if self.selected_square else []
+    ##
+
+    def draw(
+            self,
+            surface: p.surface.Surface,
+            **kwargs
+    ) -> None:
+        #TODO: when we are in pawn promotion animation we do not need to redraw everything 
+        self.draw_board(surface)
+        self.draw_pieces(surface)
+
+        if self.pawn_promotion_animation:
+            self.draw_pawn_promotion()
+    ##
+
+    def draw_pieces(
+            self,
+            surface: p.surface.Surface
+    ) -> None:
+        for r in range(DIMENSION):
+            for c in range(DIMENSION):
+                piece = self.game.board[r,c]
+                if piece != '--': #if the cell is not empty
+                    surface.blit(self.IMAGES[piece], p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
+        pass
+    ##
+
+    def draw_board(
+            self,
+            surface: p.surface.Surface
+    ) -> None:
+        
+        highlighted: Tuple[int, int] | None = self.selected_square if self.selected_square else None
+        possible_reaching_squares = [(move.end_row, move.end_col) for move in self.valid_moves if (move.start_row, move.start_col)==highlighted]
+
+        check_square = None
+        if self.game.in_check:
+            check_square = self.game.white_king_pos if self.game.white_to_move else self.game.black_king_pos
+
+        for r in range(DIMENSION):
+            for c in range(DIMENSION):
+                color = GRAPHICS_PALETTE[((r+c)%2)]
+                HIGHLIGHT_COLOR = LIGHT_HIGHLIGHT_COLOR[((r+c)%2)]                
+
+                # highlighted square
+                if (r,c) == highlighted: 
+                    if self.game.board[r,c][0] == self.game.col(): #if selected square is one of the pieces to move
+                        p.draw.rect(surface, HIGHLIGHT_COLOR, p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
+                    else:
+                        p.draw.rect(surface, color, p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
+
+                # possible moves squares
+                elif (r,c) in possible_reaching_squares:
+                    p.draw.rect(surface, HIGHLIGHT_COLOR, p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
+
+                elif (r,c) == check_square:
+                    p.draw.rect(surface, CHECK_HIGHLIGHT_COLOR, p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
+
+                # all the remainder
+                else:
+                    p.draw.rect(surface, color, p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
+    ##
+
+    def draw_pawn_promotion(self):
+        pass
+    ##
 ##
+
 
 
 ## MAIN RUNNING
 if __name__ == "__main__":
     print('PROCESS INIT')
-    main()
-#print("PROCESS ENDED CORRECTLY")
+    #main()
+    p.init()
+    screen = p.display.set_mode((HEIGHT, WIDTH))
+    game = Game(0,0)
 
+
+    while not(game.game.checkmate or game.game.stalemate):
+
+        for e in p.event.get():
+
+            game.get_event(e)
+            if e.type == p.QUIT:
+                running = False
+
+        mouse_pos = p.mouse.get_pos()
+        game.update(mouse_pos)
+        game.draw(screen, auto_display=False)
+        p.display.flip()
+
+#print("PROCESS ENDED CORRECTLY")

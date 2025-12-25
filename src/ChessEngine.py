@@ -1,5 +1,6 @@
 '''Here we store info and manage the status of game, determine valid mover, etc. This is basically the backend'''
 import numpy as np
+import random as r
 from typing import Union, Tuple, Dict, List, Callable, Optional, Any, Literal
 
 
@@ -265,7 +266,17 @@ class GameState():
                 
             #return the move to the previous player
             self.white_to_move = not self.white_to_move
+    ##
 
+    def make_random_move(
+            self, 
+            moves: List[Move] | None = None):
+        
+        if not moves:
+            moves = self.get_valid_moves()
+
+        self.make_move(moves[r.randrange(len(moves))])
+    ##
 
     '''LIST OF MOVE FILTERING METHODS. THESE ENABLE CONTROL OVER THE BOARD, LOOK FOR CHECKS, STALEMATE, CASTLING, ETC...
     THEY ARE ALL ICLUDED IN THIS CHUNK TO LET THE CODE ORDERED'''
@@ -275,11 +286,9 @@ class GameState():
 
         #check for initial king's and general PAWNS_CONDITIONS: initialization
         if self.white_to_move:
-            opp_color = 'b'; ally_color = 'w'
             start_row = self.white_king_pos[0]
             start_col = self.white_king_pos[1]
         else:
-            opp_color = 'w'; ally_color = 'b'
             start_row = self.black_king_pos[0]
             start_col = self.black_king_pos[1]
 
@@ -290,12 +299,12 @@ class GameState():
         
         #these consts are used to access check conditions in an easier way
         CONDITIONS: Dict[str, Callable] = {
-            'R': lambda i,j,k,opp_color: (i,j) in [(-1,0), (0,-1), (1,0), (0,1)],
-            'B': lambda i,j,k,opp_color: (i,j) in [(-1,-1), (-1,1), (1,-1), (1,1)],
-            'Q': lambda i,j,k,opp_color: True,
-            'K': lambda i,j,k,opp_color: k==1,
-            'P': lambda i,j,k,opp_color: all([k==1, (i,j) in [(-1,-1), (-1,1)]]) if opp_color == 'b' else all([k==1, (i,j) in [(1,1), (1,-1)]]),
-            'N': lambda i,j,k,opp_color: False
+            'R': lambda i,j,k: (i,j) in [(-1,0), (0,-1), (1,0), (0,1)],
+            'B': lambda i,j,k: (i,j) in [(-1,-1), (-1,1), (1,-1), (1,1)],
+            'Q': lambda i,j,k: True,
+            'K': lambda i,j,k: k==1,
+            'P': lambda i,j,k: all([k==1, (i,j) in [(-1,-1), (-1,1)]]) if self.opp_col() == 'b' else all([k==1, (i,j) in [(1,1), (1,-1)]]),
+            'N': lambda i,j,k: False
         }
 
         ### CHECKS/PINS OF ANY KIND EXCEPT FOR THE KNIGHT ONES ###
@@ -312,16 +321,16 @@ class GameState():
                     current_dir_cells.append((end_row, end_col))
                     end_piece = self.board[end_row, end_col]
 
-                    if end_piece[0] == ally_color: #if we find an ally piece, we look behind it to check for eventual pins
+                    if end_piece[0] == self.col(): #if we find an ally piece, we look behind it to check for eventual pins
                         if potential_pin == ():
                             potential_pin = (end_row, end_col, i,j)
                         else: #we found another ally piece along the direction, so we have no pin in that direction
                             break #hence the break of the for cycle
                     
-                    elif end_piece[0] == opp_color: #if we find a piece of the opponent, we investigate
+                    elif end_piece[0] == self.opp_col(): #if we find a piece of the opponent, we investigate
 
                         opp_piece_type = end_piece[1] #we store the piece type
-                        if CONDITIONS[opp_piece_type](i,j,k,opp_color): #we look if the check can indeed attack our king
+                        if CONDITIONS[opp_piece_type](i,j,k): #we look if the check can indeed attack our king
                             if potential_pin == (): #if it is the first piece along the direction, it is indeed a check
                                 in_check = True
                                 #checks.append((end_row, end_col, i, j)) 
@@ -341,7 +350,7 @@ class GameState():
             directions.append((start_row+i, start_col-j))
             directions.append((start_row+i, start_col+j))
 
-        KNIGHTS_CONDITIONS: Callable = lambda i,j: (self.board[i,j][0] == opp_color) and self.board[i,j][1] == 'N'
+        KNIGHTS_CONDITIONS: Callable = lambda i,j: (self.board[i,j][0] == self.opp_col()) and self.board[i,j][1] == 'N'
         for i,j in directions:
             if all([0<=i<=7, 0<=j<=7]) and KNIGHTS_CONDITIONS(i,j): #if the square is valid and is indeed occupied by a night
                 in_check = True
@@ -610,6 +619,61 @@ class GameState():
     def opp_full_col(self) -> Literal['white', 'black']:
         return 'black' if self.white_to_move else 'white'
     ##
+
+    '''Returns a string description of the game status to date, using FEM notation. Info are grabbed from the (italian) Wikipedia page: https://it.wikipedia.org/wiki/Notazione_Forsyth-Edwards. Result is still uncompleted since we do not have any memory to store half-moves (to force draw for unability to move)'''
+    def to_FEN(self) -> str:
+        s = ''
+
+        # 1. pieces
+        # TODO: add counter logic
+        for row in self.board:
+            count = 0
+            for cell in row:
+                if cell[0] == '-': 
+                    count += 1
+
+                if cell[0] == 'b':
+                    if count: s += str(count)
+                    count = 0
+                    s += cell[1].lower()
+
+                if cell[0] == 'w':
+                    if count: s += str(count)
+                    count = 0
+                    s += cell[1] #already written in CAPS LOCK
+            
+            if count: s += str(count)
+            s += '/'
+        s = s[:-1] + ' '
+
+        # 2. who to move
+        s += f'{self.col()} '
+
+        # 3. castling
+        s_castling = ''
+        
+        if not self.white_short_castle: 'K'
+        if not self.white_long_castle: 'Q'
+        if not self.black_short_castle: 'k'
+        if not self.black_long_castle: 'q'
+        if not s_castling: s_castling = '-'
+        s += f'{s_castling} '
+
+        # 4. en passant
+        for move in self.get_valid_moves():
+            if move.en_passant:
+                s += f'{move.get_rank_file(move.end_row, move.end_col)} '
+                break
+        else: s+='- '
+
+        # 5. half-moves counter
+        s += '0 '
+
+        # 6. total moves occured
+        s += f'{str(len(self.move_log))} '
+
+        return s
+    ##
 ##
 
 
@@ -628,8 +692,76 @@ def calc_moves_number(turns: int, gs: Optional[GameState] = None, tot: int = 0) 
     return sum([calc_moves_number(turns-1, gs.__deepcopy__().make_move(move)) for move in moves])
 ##
 
+'''Initialize a GameState object starting from a FEN string. IMPORTANT: we always assume that the final char of a string is the empty space ' '. This is done to enjoy an easier control. In general, we make strong assumptions about the format of such FEN strings, which we recall may not be uniform when scraping for real chess data. This is done in test mode as for now, and further implementations will evetnually be added later on.'''
+def FEN_to_chess(s: str) -> GameState:
+    
+    vert_board = []
+    white_to_move: bool = True
+    white_long_castle: bool = False
+    white_short_castle: bool = False
+    black_long_castle: bool = False
+    black_short_castle: bool = False
+
+    sect_counter = 1
+    for i in s:
+
+        if i == ' ': sect_counter += 1
+        if sect_counter == 7:
+            break
+        
+        # 1. Pieces
+        elif sect_counter == 1:
+            if i.islower(): vert_board.append('b' + i.upper()) #piece is black
+            elif i.isupper(): vert_board.append('w' + i) #piece is white
+            elif i=='/': pass #we do nothing here
+            else: vert_board += int(i) * ['--'] #i is an integer, need to handle
+
+        # 2. Who to move
+        elif sect_counter == 2:
+            white_to_move = (i=='w')
+
+        # 3. castling rights
+        elif sect_counter == 3:
+            if i=='Q': white_long_castle = True
+            if i=='K': white_short_castle = True
+            if i=='q': black_long_castle = True
+            if i=='k': black_short_castle = True
+
+        # 4. en-passant
+        elif sect_counter == 4:
+            pass
+        
+        # 5. Semi-moves
+        elif sect_counter == 5:
+            pass
+        
+        # 6. Number of moves
+        elif sect_counter == 6:
+            pass 
+    ##
+
+    game = GameState()
+    assert len(vert_board) == 64, 'Invalid board provided as input, check your data'
+    game.board = np.array(vert_board).reshape((8,8))
+
+    game.white_to_move = white_to_move
+    game.white_short_castle = white_short_castle
+    game.white_long_castle = white_long_castle
+    game.black_short_castle = black_short_castle
+    game.black_long_castle = black_long_castle
+        
+    return game
+##
+
+'''Store a chess game using FEN portable notation'''
+def chess_to_FEN(game: GameState) -> str:
+    return game.to_FEN()
+##
+
 if __name__ == '__main__':
-    #print(calc_moves_number(5))
-    #gs = GameState()
-    #print(gs.__dict__)
-    pass
+    game = GameState()
+    test_string = game.to_FEN()
+    
+    game_copy = FEN_to_chess(test_string)
+    print(game_copy.board)
+##
